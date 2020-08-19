@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Invisibility Cloak</title>
+</head>
+<body>
+<h2>Wait for 2 sec before coming in front of screen</h2>
+<p id="status">OpenCV.js is loading...</p>
+<table cellpadding="0" cellspacing="0" width="0" border="0">
+	<tbody>
+		<tr>
+			<td>
+				<video id="videoInput" width="320" height="240"></video>
+			</td>
+			<td>
+				<canvas id="canvasOutput" width="320" height="240">
+			</td>
+		</tr>
+	</tbody>
+</table>
+
+
+<div>
+  <div class="inputoutput">
+    <canvas id="canvasOutput" ></canvas>
+    <div class="caption">canvasOutput</div>
+  </div>
+</div>
+<script type="text/javascript">
+let imgElement = document.getElementById('imageSrc');
+let inputElement = document.getElementById('fileInput');
+inputElement.addEventListener('change', (e) => {
+  imgElement.src = URL.createObjectURL(e.target.files[0]);
+}, false);
+imgElement.onload = function() {
+  let mat = cv.imread(imgElement);
+  cv.imshow('canvasOutput', mat);
+  mat.delete();
+};
+function onOpenCvReady() {
+  document.getElementById('status').innerHTML = 'OpenCV.js is ready.';
+}
+</script>
+<script type="text/javascript">
+let video = document.getElementById('videoInput');
+let src = new cv.Mat(video.height, video.width, cv.CV_8UC4);
+let dst = new cv.Mat(video.height, video.width, cv.CV_8UC4);
+let hsv = new cv.Mat();
+let cap = new cv.VideoCapture(video);
+const lowered = [100,40,40];
+const uppered = [100,255,255];
+let mask1 = new cv.Mat();
+let faces = new cv.RectVector();
+let classifier = new cv.CascadeClassifier();
+let background = new cv.Mat();
+let mask2 = new cv.Mat();
+let res2 = new cv.Mat();
+let res1 = new cv.Mat();
+
+cap.read(src);
+for (let i = 0; i < 60; ++i) {
+        	cap.read(src);
+        	cv.imshow('canvasOutput',background) ;   
+            }
+// load pre-trained classifiers
+const FPS = 30;
+function processVideo() {
+    try {
+        if (!streaming) {
+            // clean and stop.
+            src.delete();
+            dst.delete();
+            gray.delete();
+            faces.delete();
+            classifier.delete();
+            return;
+        }
+        let begin = Date.now();
+        let anchor = new cv.Point(-1, -1);
+        // start processing.
+        cap.read(src);
+        //src.copyTo(dst);
+        cv.cvtColor(src, hsv, cv.COLOR_RGBA2HSV, 0);
+        cv.inRange(hsv,lowered,uppered,mask1);
+		cv.inRange(hsv,[155,40,40],[180,255,255],mask2);
+		mask1 = mask1 + mask2;
+		cv.morphologyEx(mask1,mask1, cv.MORPH_OPEN, cv.Mat(3, 3, cv.CV_8U), anchor, 2, cv.BORDER_CONSTANT, cv.morphologyDefaultBorderValue());
+		cv.dilate(src, dst, cv.Mat(3, 3, cv.CV_8U), anchor, 1, cv.BORDER_CONSTANT, cv.morphologyDefaultBorderValue());
+		cv.bitwise_not(mask1, mask2);
+		cv.bitwise_and(background, background, mask1, res1);
+		cv.bitwise_and(src, src, mask1, res2);
+		cv.addWeighted(res1, 1, res2, 1, 0, dst);
+        cv.imshow('canvasOutput', dst);
+        // schedule the next one.
+        let delay = 1000/FPS - (Date.now() - begin);
+        setTimeout(processVideo, delay);
+    } catch (err) {
+        utils.printError(err);
+    }
+};
+
+// schedule the first one.
+setTimeout(processVideo, 0);
+
+</script>
+<script async src="https://docs.opencv.org/master/opencv.js" onload="onOpenCvReady();" type="text/javascript"></script>
+</body>
+</html>

@@ -1,0 +1,115 @@
+<!doctype html>
+<html>
+<head>
+    <title>OpenCV Video Examples - Camera</title>
+</head>
+<body>
+<h1>OpenCV Camera</h1>
+<p id="status">OpenCV.js is loading...</p>
+<div>
+    <button id="actionBtn">Start</button>
+</div>
+<video id="video" width="300" height="225"></video>
+<canvas id="canvasOutput"></canvas>
+<script async src="https://docs.opencv.org/master/opencv.js" type="text/javascript" onload="onCvLoaded();"></script>
+<script>
+function onCvLoaded () {
+    console.log('cv', cv);
+    document.getElementById('status').innerHTML = 'OpenCV.js is ready.';
+    cv.onRuntimeInitialized = onReady;
+}
+const video = document.getElementById('video');
+const actionBtn = document.getElementById('actionBtn');
+const width = 300;
+const height = 225;
+const FPS = 30;
+let stream;
+let streaming = false;
+let src = new cv.Mat(video.height, video.width, cv.CV_8UC4);
+let dst = new cv.Mat(video.height, video.width, cv.CV_8UC4);
+let hsv = new cv.Mat();
+let cap = new cv.VideoCapture(video);
+const lowered = [100,40,40];
+const uppered = [100,255,255];
+let mask1 = new cv.Mat();
+let faces = new cv.RectVector();
+let classifier = new cv.CascadeClassifier();
+let background = new cv.Mat();
+let mask2 = new cv.Mat();
+let res2 = new cv.Mat();
+let res1 = new cv.Mat();
+
+cap.read(src);
+for (let i = 0; i < 60; ++i) {
+            cap.read(src);
+            cv.imshow('canvasOutput',background) ;   
+            }
+function onReady () {
+    let src;
+    let dst;
+    const cap = new cv.VideoCapture(video);
+
+    actionBtn.addEventListener('click', () => {
+        if (streaming) {
+            stop();
+            actionBtn.textContent = 'Start';
+        } else {
+            start();
+            actionBtn.textContent = 'Stop';
+        }
+    });
+
+    function start () {
+        navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+        .then(_stream => {
+            stream = _stream;
+            console.log('stream', stream);
+            video.srcObject = stream;
+            video.play();
+            streaming = true;
+            src = new cv.Mat(height, width, cv.CV_8UC4);
+            dst = new cv.Mat(height, width, cv.CV_8UC1);
+            setTimeout(processVideo, 0)
+        })
+        .catch(err => console.log(`An error occurred: ${err}`));
+    }
+
+    function stop () {
+        if (video) {
+            video.pause();
+            video.srcObject = null;
+        }
+        if (stream) {
+            stream.getVideoTracks()[0].stop();
+        }
+        streaming = false;
+    }
+
+    function processVideo () {
+        if (!streaming) {
+            src.delete();
+            dst.delete();
+            return;
+        }
+        const begin = Date.now();
+        let anchor = new cv.Point(-1, -1);
+        cap.read(src)
+        cv.cvtColor(src, hsv, cv.COLOR_RGBA2HSV, 0);
+        cv.inRange(hsv,lowered,uppered,mask1);
+        cv.inRange(hsv,[155,40,40],[180,255,255],mask2);
+        mask1 = mask1 + mask2;
+        cv.morphologyEx(mask1,mask1, cv.MORPH_OPEN, cv.Mat(3, 3, cv.CV_8U), anchor, 2, cv.BORDER_CONSTANT, cv.morphologyDefaultBorderValue());
+        cv.dilate(src, dst, cv.Mat(3, 3, cv.CV_8U), anchor, 1, cv.BORDER_CONSTANT, cv.morphologyDefaultBorderValue());
+        cv.bitwise_not(mask1, mask2);
+        cv.bitwise_and(background, background, mask1, res1);
+        cv.bitwise_and(src, src, mask1, res2);
+        cv.addWeighted(res1, 1, res2, 1, 0, dst);
+        cv.imshow('canvasOutput', dst);
+        const delay = 1000/FPS - (Date.now() - begin);
+        setTimeout(processVideo, delay);
+    }
+}
+
+</script>
+</body>
+</html>
