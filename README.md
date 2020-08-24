@@ -5,11 +5,11 @@ The usable hosted version is under construction, till then one may follow the be
 
 ### Cloning the github repository
 One may fork the repo and then clone it or
-'''git clone https://github.com/Tanay-27/Invisibility.git'''
+` git clone https://github.com/Tanay-27/Invisibility.git `
 ### Installing the dependencies
-''' pip install -r requirements.txt '''
+` pip install -r requirements.txt `
 ### Running the program
-''' python inv.py '''
+` python inv.py `
 #### The command prompt will be showing the localhost address http://localhost:5000/, copy paste the address in the browser of your choice,
 #### wait for 2-3 seconds before coming in front the screen
 #### bring any red coloured object, preferably a blanket or long cloth, hide yourself and enjoy
